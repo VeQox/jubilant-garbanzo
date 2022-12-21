@@ -16,8 +16,12 @@ export default class Client {
 
   public intersects(o: Client): boolean {
     let intersects = this.Coords.intersects(o.Coords.peek()!);
-    if (intersects) this.score++;
+    if (intersects) o.score++;
     return intersects;
+  }
+
+  public respawn(width: number, height: number) {
+    this.Coords = new Tail(new Coord(Math.round(Math.random() * (width - 1)), Math.round(Math.random() * (height - 1))), 10);
   }
 }
 
@@ -45,7 +49,7 @@ export class Tail {
 
   public intersects(coord: Coord): boolean {
     for (let { X, Y } of this.Coords) {
-      if (coord.X === X && this.peek()?.Y === Y) return true;
+      if (coord.X === X && coord.Y === Y) return true;
     }
     return false;
   }

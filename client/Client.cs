@@ -4,7 +4,7 @@ namespace Client
 {
   public class Client
   {
-    public int ID { get; }
+    public int ID { get; private set; }
     private ClientWebSocket WebSocket { get; set; }
     private Thread InputThread { get; set; }
 
@@ -17,7 +17,7 @@ namespace Client
 
     public async void Start(Uri uri)
     {
-      if (!await Connect(uri)) return;
+      if (!Connect(uri)) return;
       SetConsoleWindow();
       InputThread.Start();
 
@@ -27,13 +27,16 @@ namespace Client
       }
     }
 
-    public void Update(ServerMessage? message)
+    public void Update(Player[]? players)
     {
-      if (message == null || message.Players == null) return;
-      foreach (Player player in message.Players)
+      if (players == null) return;
+      Console.Clear();
+      Console.SetCursorPosition(0, 0);
+      Console.Write(players.AsEnumerable().Where(player => player.Id == ID).First().Score);
+      foreach (Player player in players)
       {
         if (player.Coords == null) continue;
-        foreach (Coord coord in player.Coords)
+        foreach (Coord coord in player.Coords.CoordsCoords)
         {
           Console.SetCursorPosition(coord.X, coord.Y);
           Console.Write(player.Char);
@@ -41,16 +44,18 @@ namespace Client
       }
     }
 
-    public async Task<ServerMessage?> Receive()
+    public async Task<Player[]?> Receive()
     {
       byte[] buffer = new byte[1024];
       WebSocketReceiveResult response = await WebSocket.ReceiveAsync(buffer, CancellationToken.None);
-      return JsonSerializer.Deserialize<ServerMessage>(ConvertToString(buffer, response));
+      string jsonString = ConvertToString(buffer, response);
+      return Player.FromJson(jsonString);
     }
 
     public async void Send(ConsoleKey key)
     {
-      await WebSocket.SendAsync(ConvertToBuffer(JsonSerializer.Serialize(key)), WebSocketMessageType.Text, true, CancellationToken.None);
+      string jsonString = JsonSerializer.Serialize(key);
+      await WebSocket.SendAsync(ConvertToBuffer(jsonString), WebSocketMessageType.Text, true, CancellationToken.None);
     }
 
     private ArraySegment<byte> ConvertToBuffer(string message)
@@ -65,19 +70,28 @@ namespace Client
     {
       while (WebSocket.State == WebSocketState.Open)
       {
-        if (Console.KeyAvailable)
+        try
         {
-          var key = Console.ReadKey(true);
-          Send(key.Key);
+          if (Console.KeyAvailable)
+          {
+            var key = Console.ReadKey(true);
+            Send(key.Key);
+          }
         }
+        catch
+        {
+
+        }
+
       }
     }
 
-    private async Task<bool> Connect(Uri uri)
+    private bool Connect(Uri uri)
     {
+      CancellationTokenSource cancellationTokenSource = new CancellationTokenSource();
       try
       {
-        await WebSocket.ConnectAsync(uri, CancellationToken.None);
+        WebSocket.ConnectAsync(uri, cancellationTokenSource.Token).Wait(cancellationTokenSource.Token);
       }
       catch (Exception)
       {
@@ -94,10 +108,19 @@ namespace Client
 
       int width = dimensions[0];
       int height = dimensions[1];
+      ID = dimensions[2];
 
-      Console.SetWindowSize(width, height);
-      Console.SetBufferSize(width, height);
-      Console.CursorVisible = false;
+
+      try
+      {
+        Console.SetWindowSize(width, height);
+        Console.SetBufferSize(width, height);
+        Console.CursorVisible = false;
+      }
+      catch
+      {
+
+      }
     }
 
     private string ConvertToString(byte[] buffer, WebSocketReceiveResult result)
