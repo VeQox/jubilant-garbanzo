@@ -15,13 +15,16 @@ export default class Client {
   }
 
   public intersects(o: Client): boolean {
-    let intersects = this.Coords.intersects(o.Coords.peek()!);
-    if (intersects) o.score++;
+    let intersects = false;
+    o.Coords.Coords.forEach(coord => {
+      if (this.Coords.intersects(coord)) intersects = true;
+    })
+    if (intersects) o.score += o.Coords.length;
     return intersects;
   }
 
   public respawn(width: number, height: number) {
-    this.Coords = new Tail(new Coord(Math.round(Math.random() * (width - 1)), Math.round(Math.random() * (height - 1))), 10);
+    this.Coords = new Tail(new Coord(Math.round(Math.random() * (width - 1)), Math.round(Math.random() * (height - 1))), 1);
   }
 }
 

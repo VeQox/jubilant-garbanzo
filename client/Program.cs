@@ -5,7 +5,7 @@
     public static void Main()
     {
       Client client = new();
-      client.Start(new Uri("ws://localhost:8080"));
+      client.Start(new Uri("ws://172.17.221.110:8080"));
     }
   }
 }
